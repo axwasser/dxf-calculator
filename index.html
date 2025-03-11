@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DXF Path Length Calculator</title>
+    <style>
+        :root {
+            --primary-color: #2a6cc7;
+            --secondary-color: #f0f4f8;
+            --accent-color: #4caf50;
+            --text-color: #333;
+            --border-radius: 6px;
+            --box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--text-color);
+            line-height: 1.6;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-top: 20px;
+        }
+        
+        h1 {
+            color: var(--primary-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+        }
+        
+        .file-input {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        
+        .file-input-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 12px 20px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: background-color 0.3s;
+            border: 2px dashed #ddd;
+            height: 120px;
+            flex-direction: column;
+        }
+        
+        .file-input-label:hover {
+            background-color: #e4e9f0;
+        }
+        
+        .file-input-label.file-selected {
+            border-color: var(--accent-color);
+            background-color: rgba(76, 175, 80, 0.1);
+        }
+        
+        .file-input input[type="file"] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        .file-name {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .upload-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: var(--primary-color);
+        }
+        
+        button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: var(--border-radius);
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #1d5aad;
+        }
+        
+        button:disabled {
+            background-color: #b0bec5;
+            cursor: not-allowed;
+        }
+        
+        #result-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: var(--secondary-color);
+            border-radius: var(--border-radius);
+            display: none;
+        }
+        
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .result-header h2 {
+            color: var(--primary-color);
+            margin: 0;
+        }
+        
+        .result-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .result-label {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .result-value {
+            font-size: 20px;
+            color: var(--primary-color);
+        }
+        
+        .result-unit {
+            font-size: 14px;
+            color: #666;
+        }
+        
+        .entities-list {
+            margin-top: 10px;
+        }
+        
+        .entity-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        
+        .error-message {
+            background-color: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <!-- Include the ezdxf.js library from CDN -->
+    <script src="https://unpkg.com/ezdxf-bundle@0.1.0/dist/ezdxf-bundle.js"></script>
+</head>
+<body>
+    <h1>DXF Path Length Calculator</h1>
+    
+    <div class="container">
+        <div class="form-group">
+            <label for="dxf-file">DXF File</label>
+            <div class="file-input">
+                <label class="file-input-label" id="file-label">
+                    <div class="upload-icon">📁</div>
+                    <span>Drag or click to import a DXF file</span>
+                    <span class="file-name" id="file-name"></span>
+                </label>
+                <input type="file" id="dxf-file" accept=".dxf" />
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label for="cutting-speed">Cutting Speed (mm/min)</label>
+            <input type="number" id="cutting-speed" value="1000" min="1" />
+        </div>
+        
+        <div class="form-group">
+            <label for="cost-per-minute">Cost per Minute ($)</label>
+            <input type="number" id="cost-per-minute" value="1.00" min="0" step="0.01" />
+        </div>
+        
+        <button id="calculate-btn" disabled>Calculate</button>
+        
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Analyzing DXF file...</p>
+        </div>
+        
+        <div class="error-message" id="error-message"></div>
+        
+        <div id="result-container">
+            <div class="result-header">
+                <h2>Results</h2>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Total Path Length</div>
+                <div class="result-value" id="total-length">0</div>
+                <div class="result-unit">mm</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Estimated Cutting Time</div>
+                <div class="result-value" id="cutting-time">0</div>
+                <div class="result-unit">at <span id="speed-display">1000</span> mm/min</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Estimated Cost</div>
+                <div class="result-value" id="cutting-cost">$0.00</div>
+                <div class="result-unit">at <span id="cost-rate-display">1.00</span> $/min</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Total Entity Count</div>
+                <div class="result-value" id="entity-count">0</div>
+            </div>
+            
+            <div class="result-item">
+                <div class="result-label">Entity Types</div>
+                <div class="entities-list" id="entities-list"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('dxf-file');
+            const fileLabel = document.getElementById('file-label');
+            const fileName = document.getElementById('file-name');
+            const calculateBtn = document.getElementById('calculate-btn');
+            const cuttingSpeedInput = document.getElementById('cutting-speed');
+            const resultContainer = document.getElementById('result-container');
+            const errorMessage = document.getElementById('error-message');
+            const loading = document.getElementById('loading');
+            
+            // Éléments d'affichage des résultats
+            const totalLengthElement = document.getElementById('total-length');
+            const cuttingTimeElement = document.getElementById('cutting-time');
+            const cuttingCostElement = document.getElementById('cutting-cost');
+            const entityCountElement = document.getElementById('entity-count');
+            const entitiesListElement = document.getElementById('entities-list');
+            const speedDisplayElement = document.getElementById('speed-display');
+            const costRateDisplayElement = document.getElementById('cost-rate-display');
+            
+            // Gestionnaire de changement de fichier
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    const file = this.files[0];
+                    fileName.textContent = file.name;
+                    fileLabel.classList.add('file-selected');
+                    calculateBtn.disabled = false;
+                } else {
+                    fileName.textContent = '';
+                    fileLabel.classList.remove('file-selected');
+                    calculateBtn.disabled = true;
+                }
+                
+                // Réinitialise les résultats
+                resultContainer.style.display = 'none';
+                errorMessage.style.display = 'none';
+            });
+            
+            // Gestionnaire de soumission
+            calculateBtn.addEventListener('click', function() {
+                if (!fileInput.files.length) {
+                    return;
+                }
+                
+                const file = fileInput.files[0];
+                
+                if (!file.name.toLowerCase().endsWith('.dxf')) {
+                    showError('File must be in DXF format.');
+                    return;
+                }
+                
+                const cuttingSpeed = parseFloat(cuttingSpeedInput.value);
+                if (isNaN(cuttingSpeed) || cuttingSpeed <= 0) {
+                    showError('Cutting speed must be a positive number.');
+                    return;
+                }
+                
+                const costPerMinute = parseFloat(document.getElementById('cost-per-minute').value);
+                if (isNaN(costPerMinute) || costPerMinute < 0) {
+                    showError('Cost per minute must be a non-negative number.');
+                    return;
+                }
+                
+                // Cache tout message d'erreur précédent
+                errorMessage.style.display = 'none';
+                resultContainer.style.display = 'none';
+                
+                // Affiche le loader
+                loading.style.display = 'block';
+                calculateBtn.disabled = true;
+                
+                // Lecture du fichier DXF
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const content = event.target.result;
+                        
+                        // Calcul de la longueur des tracés directement dans le navigateur
+                        processDXF(content, cuttingSpeed, costPerMinute);
+                    } catch (error) {
+                        loading.style.display = 'none';
+                        calculateBtn.disabled = false;
+                        showError('Error processing DXF file: ' + error.message);
+                    }
+                };
+                
+                reader.onerror = function() {
+                    loading.style.display = 'none';
+                    calculateBtn.disabled = false;
+                    showError('Failed to read the file.');
+                };
+                
+                reader.readAsArrayBuffer(file);
+            });
+            
+            function processDXF(content, cuttingSpeed, costPerMinute) {
+                try {
+                    // Decode using the ezdxf library
+                    const doc = window.ezdxf.readDxf(content);
+                    const modelspace = doc.entities;
+                    
+                    // Calculate total length
+                    let totalLength = 0;
+                    let entityCount = 0;
+                    const entitiesByType = {};
+                    
+                    // Process all entities
+                    for (const entity of modelspace) {
+                        const type = entity.type;
+                        entitiesByType[type] = (entitiesByType[type] || 0) + 1;
+                        entityCount++;
+                        
+                        // Calculate length based on entity type
+                        let entityLength = 0;
+                        
+                        if (type === 'LINE') {
+                            const start = entity.start;
+                            const end = entity.end;
+                            entityLength = distance(start, end);
+                        } 
+                        else if (type === 'CIRCLE') {
+                            const radius = entity.radius;
+                            entityLength = 2 * Math.PI * radius;
+                        }
+                        else if (type === 'ARC') {
+                            const radius = entity.radius;
+                            const startAngle = entity.startAngle;
+                            const endAngle = entity.endAngle;
+                            entityLength = calculateArcLength(radius, startAngle, endAngle);
+                        }
+                        else if (type === 'LWPOLYLINE') {
+                            const vertices = entity.vertices;
+                            for (let i = 0; i < vertices.length - 1; i++) {
+                                entityLength += distance(vertices[i], vertices[i+1]);
+                            }
+                            
+                            // If closed
+                            if (entity.isClosed && vertices.length > 1) {
+                                entityLength += distance(vertices[vertices.length-1], vertices[0]);
+                            }
+                        }
+                        
+                        totalLength += entityLength;
+                    }
+                    
+                    // Calculate cutting time and cost
+                    const cuttingTimeMinutes = totalLength / cuttingSpeed;
+                    const cuttingCost = cuttingTimeMinutes * costPerMinute;
+                    
+                    // Display results
+                    displayResults({
+                        totalLength,
+                        entityCount,
+                        entitiesByType,
+                        cuttingTimeMinutes,
+                        cuttingSpeed,
+                        cuttingCost,
+                        costPerMinute
+                    });
+                    
+                } catch (error) {
+                    showError('Error analyzing DXF: ' + error.message);
+                } finally {
+                    loading.style.display = 'none';
+                    calculateBtn.disabled = false;
+                }
+            }
+            
+            function distance(point1, point2) {
+                return Math.sqrt(
+                    Math.pow(point2.x - point1.x, 2) + 
+                    Math.pow(point2.y - point1.y, 2)
+                );
+            }
+            
+            function calculateArcLength(radius, startAngle, endAngle) {
+                if (endAngle < startAngle) {
+                    endAngle += 360;
+                }
+                const angleRad = (endAngle - startAngle) * (Math.PI / 180);
+                return radius * angleRad;
+            }
+            
+            function formatTime(minutes) {
+                const hours = Math.floor(minutes / 60);
+                const mins = Math.floor(minutes % 60);
+                const seconds = Math.floor((minutes * 60) % 60);
+                return `${hours}h ${mins}m ${seconds}s`;
+            }
+            
+            function displayResults(results) {
+                speedDisplayElement.textContent = results.cuttingSpeed;
+                costRateDisplayElement.textContent = results.costPerMinute.toFixed(2);
+                totalLengthElement.textContent = results.totalLength.toFixed(2);
+                cuttingTimeElement.textContent = formatTime(results.cuttingTimeMinutes);
+                cuttingCostElement.textContent = `$${results.cuttingCost.toFixed(2)}`;
+                entityCountElement.textContent = results.entityCount;
+                
+                // Display entity types
+                entitiesListElement.innerHTML = '';
+                for (const [type, count] of Object.entries(results.entitiesByType)) {
+                    const entityItem = document.createElement('div');
+                    entityItem.className = 'entity-item';
+                    entityItem.innerHTML = `
+                        <span>${type}</span>
+                        <span>${count}</span>
+                    `;
+                    entitiesListElement.appendChild(entityItem);
+                }
+                
+                resultContainer.style.display = 'block';
+            }
+            
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>
